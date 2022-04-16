@@ -1,0 +1,8 @@
+urllib3
+pandas
+numpy
+zipfile36
+matplotlib
+theano
+lasagne
+sklearn

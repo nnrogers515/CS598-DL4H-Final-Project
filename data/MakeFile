@@ -1,0 +1,18 @@
+PYTHON = python3
+
+.PHONY = help setup run clean
+
+.DEFAULT_GOAL = help
+
+help:
+	@echo "----------HELP----------"
+	@echo "Example Commands:"
+	@echo "	   - make run - Starts the Model Classification As Normal and Displays Info"
+	@echo "    - make train - Trains the Model Using the Data From data/S1_File.txt"
+	@echo "----------HELP----------"
+
+run:
+	$(PYTHON) Main.py run
+
+train:
+	$(PYTHON) Main.py train
