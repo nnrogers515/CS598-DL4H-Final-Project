@@ -61,7 +61,7 @@ def retrieve_data(print_out=False):
         urllib.request.urlretrieve(SIM_DATA_URL, SIM_DATA_ZIP)
 
     # Unzip our Data into Usable Form
-    if not os.path.exists("./data"):
+    if not os.path.exists("./data") or not os.path.exists(INPUT_FILE):
         with zipfile.ZipFile(SIM_DATA_ZIP, 'r') as zipped_file:
             zipped_file.extractall("./data")
 

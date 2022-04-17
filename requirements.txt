@@ -1,6 +1,6 @@
 urllib3
 pandas
-numpy
+numpy===1.20.3
 zipfile36
 matplotlib
 theano
