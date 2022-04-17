@@ -49,7 +49,7 @@ The dependencies required for this project can be found inside of the requiremen
 
 - urllib3
 - pandas
-- numpy=== 1.20.3 (Downgraded Version Needed for Theano and Lasagne)
+- numpy===1.20.3 (Downgraded Version Needed for Theano and Lasagne)
 - zipfile36
 - matplotlib
 - theano
