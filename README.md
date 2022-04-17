@@ -8,8 +8,7 @@ The code in this repository is either re-used or heavily based off the code from
 1. Clone this repository locally using the method of your choice. For the simplest to setup, cloning over http with standard github credentials would be best. The command for this you would type into your terminal that has access to the `git` CLI tool: `git clone https://github.com/nnrogers515/CS598-DL4H-Final-Project.git`
 2. Before running any code you will need to use `cd CS598-DL4H-Final-Project` to enter the project directory then install the necessary imports via `pip install -r requirements.txt`
 3. Due to additional import complications, you will also need to manually upgrade versions for Theano and Lasagne using the follow commands:
-   1. `pip install --upgrade https://github.com/Theano/Theano/archive/master.zip`
-   2. `pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip`
+   1. `pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip`
 4. On the first run, it is best to use `make new` which should provide a setup for the input dataset provided or download the data directly if no dataset at the path `data/S1_File.txt` exists.
 5. For further runs, you can simply run `make run` and the model should run it's classification based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file. For convenience, the data folder will be created with already pre-processed files but S1_File.txt will be repulled through the code if needed as it is quite large.
 6. If you wish to make any changes to how the model is trained you can edit the `Configuration.py` file and use `make new` again, the splits for the data can be adjusted at the top of `DataPrep.py` should you have new data with different split dimensions.
