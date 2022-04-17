@@ -64,6 +64,7 @@ pip install --upgrade https://github.com/Theano/Theano/archive/master.zip
 pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip
 ```
 
+If you are still having issues running the app, create a virtual python environment using `python3 -m venv .` inside of the cloned github repos, then use `source bin/activate`, then explicitly download the versions and dependencies listed in the `dependencyConfirmation.txt` file. This is the Nuclear option, but if all else fails this environment setup should work no matter what!
 
 ## Datasets and Downloads
 
