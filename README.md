@@ -20,7 +20,7 @@ NOTE: If you are unable to use `make` then use `python3 Main.py new` for a new r
 
 1. Data Pre-Processing Code can be found in `DataPrep.py`
 2. Training and Evaluation Code are found in either `CONTENT.py` or `CONTENT_FixedBatch.py`
-3. The Pretrained model will be stored in the `model/` folder in this repository
+3. The Pretrained model will be stored in the `model/` folder in this repository (WIP)
 
 ## Results Table
 
@@ -49,7 +49,7 @@ The dependencies required for this project can be found inside of the requiremen
 
 - urllib3
 - pandas
-- numpy
+- numpy=== 1.20.3 (Downgraded Version Needed for Theano and Lasagne)
 - zipfile36
 - matplotlib
 - theano
