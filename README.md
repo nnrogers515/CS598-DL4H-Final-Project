@@ -10,12 +10,14 @@ The code in this repository is either re-used or heavily based off the code from
 3. After cloning the repository and installing the dependencies, you can simply run `make run` and the model should run it's classification based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file. For convenience, the data folder will be created with already pre-processed files but S1_File.txt will be repulled through the code if needed as it is quite large.
 4. If you wish to make any changes to how the model is trained you can edit the `Configuration.py` file and use `make train`.
 
-NOTE: If you are unable to use `make` then use `python3 Main.py train` for training or `python3 Main.py run` for just testing.
+NOTE: If you are unable to use `make` then use `python3 Main.py train` for training or `python3 Main.py` for just testing.
 
 ## Code Flow
 
 1. We start in `DataPrep.py` where we pull the data, pre-process the data and set up the splits for training, validation, and testing.
 2. Next this data is read in through `PatientDataLoader.py` along with the information in `Configuration.py` to produce the files utilized by `CONTENT.py` and `CONTENT_FixedBatch.py` where the model is trained and produces it's classification predictions on whether a patient is likely to be readmitted to the hospital (1) or not (0).
+3. For a better understanding of the project flow, check out `Main.py`
+
 
 
 # Sources

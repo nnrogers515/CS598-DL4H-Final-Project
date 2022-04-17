@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[23]:
-
-
 ### CODE IN THIS FILE IS BASED ON THE FORMAT OF https://github.com/danicaxiao/CONTENT/blob/master/transform.py
 ### HOWEVER THE CODE IS WRITTEN IN MY OWN FORM FOR BETTER UNDERSTANDING
 
@@ -14,10 +8,6 @@ import pandas as pd
 import csv
 import pickle
 import numpy as np
-
-
-# In[2]:
-
 
 # Global Definitions
 
@@ -61,12 +51,9 @@ Y_VALID_FILE = "./data/Y_valid.pkl"
 Y_TEST_FILE = "./data/Y_test.pkl"
 
 # Train/Validation Split Values
-TRAIN_COUNT = 4000
-VALID_COUNT = 700
-
-
-# In[7]:
-
+TRAIN_COUNT = 2000
+VALID_COUNT = 600
+TEST_COUNT = 400
 
 def retrieve_data(print_out=False):
     # Retrieve Data If Not In Our Active Directory
@@ -88,15 +75,7 @@ def retrieve_data(print_out=False):
 
     return data
 
-print("Retrieving Data...")
-data = retrieve_data(True)
-print("Done!")
-
-
-# In[8]:
-
-
-def data_to_csv(data):
+def data_to_csv(data, print_out=False):
     # Group Our Data By Description
     desc = data.groupby('DX_GROUP_DESCRIPTION').size().to_frame('SIZE').reset_index()
     rare = desc[desc['SIZE'] > RARE_WORD]
@@ -107,21 +86,19 @@ def data_to_csv(data):
         
     rare.index += 2 # We will follow the studies format of keeping "Unknown" as 1
     
-    print("Writing Vocab List to CSV...")
+    if print_out:
+        print("Writing Vocab List to CSV...")
     rare.to_csv(VOCAB_FILE, sep = '\t', header = False, index = True)
-    print("Done!")
+    if print_out:
+        print("Done!")
     
-    print("\nWriting Stop Word List to CSV...")
+    if print_out:
+        print("\nWriting Stop Word List to CSV...")
     stop.to_csv(STOP_FILE, sep = '\t', header = False, index = False)
-    print("Done!")
+    if print_out:
+        print("Done!")
+        print("\nData Successfully Written as {} and {} in CSV Format!".format(VOCAB_FILE, STOP_FILE))
     
-    print("\nData Successfully Written as {} and {} in CSV Format!".format(VOCAB_FILE, STOP_FILE))
-    
-data_to_csv(data)
-
-
-# In[9]:
-
 
 def load_data_from_file():
     word2ind = {}
@@ -135,24 +112,19 @@ def load_data_from_file():
     
     return word2ind
 
-# load_data_from_file()
-# load_pkl(VOCAB_PKL)
-
-
-# In[16]:
-
-
 # THIS FUNCTION IS DIRECTLY RE-USED FROM https://github.com/danicaxiao/CONTENT/blob/master/transform.py
-def convert_format(word_to_index, events):
+def convert_format(word_to_index, events, print_out=False):
     # order by PID, DAY_ID
     with open(INPUT_FILE, mode='r') as f:
         # header
         header = f.readline().strip().split('\t')
-        print(header)
+        if print_out:
+            print(header)
         pos = {}
         for key, value in enumerate(header):
             pos[value] = key
-        print(pos)
+        if print_out:
+            print(pos)
 
         docs = []
         doc = []
@@ -234,10 +206,6 @@ def extract_events():
 
     return events
 
-
-# In[20]:
-
-
 def splits(X, labels):
     save_pkl(X_TRAIN_FILE, X[:TRAIN_COUNT])
     save_pkl(X_VALID_FILE, X[TRAIN_COUNT:(TRAIN_COUNT + VALID_COUNT)])
@@ -245,28 +213,3 @@ def splits(X, labels):
     save_pkl(Y_TRAIN_FILE, labels[:TRAIN_COUNT])
     save_pkl(Y_VALID_FILE, labels[TRAIN_COUNT:(TRAIN_COUNT + VALID_COUNT)])
     save_pkl(Y_TEST_FILE,  labels[TRAIN_COUNT + VALID_COUNT:])
-
-
-# In[21]:
-
-
-# This Cell Mimics Main() in https://github.com/danicaxiao/CONTENT/blob/master/transform.py
-# This Should Setup the Data Needed For Training, Validation, and Testing
-def main():
-    data = retrieve_data(True)
-    data_to_csv(data)
-    word2ind = load_data_from_file()
-    events = extract_events()
-    data, labels = convert_format(word2ind, events)
-    splits(data, labels)
-
-
-# In[22]:
-
-
-main()
-
-
-# 
-
-# 

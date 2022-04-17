@@ -18,14 +18,11 @@ import matplotlib.pyplot as plt
 import theano
 import theano.tensor as T
 import lasagne
-from config import Config
-from patient_data_reader import PatientReader
-import os
 import time
 import numpy as np
-from lasagne.layers.timefusion import MaskingLayer
+# from lasagne.layers.timefusion import MaskingLayer # Cannot Find This Import Literally Anywhere in Existence Outside this Repos
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, accuracy_score, precision_recall_curve
-from lasagne.layers.theta import ThetaLayer
+# from lasagne.layers.theta import ThetaLayer # Cannot Find This Import Literally Anywhere in Existence Outside this Repos
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import average_precision_score as pr_auc
 
@@ -83,7 +80,7 @@ def loadEmbeddingMatrix(wordvecFile):
 	return W
 
 
-def main(data_sets, W_embed):
+def run(data_sets, W_embed):
     # Optimization learning rate
     LEARNING_RATE = theano.shared(np.array(0.001, dtype=theano.config.floatX))
     eta_decay = np.array(0.5, dtype=theano.config.floatX)
@@ -128,20 +125,20 @@ def main(data_sets, W_embed):
         l_embed, N_HIDDEN, mask_input=l_mask, grad_clipping=GRAD_CLIP,
         only_return_final=False)
 
-    l_forward = MaskingLayer([l_forward0, l_mask])
+    # l_forward = MaskingLayer([l_forward0, l_mask])
 
     l_1 = lasagne.layers.DenseLayer(l_in, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
     l_2 = lasagne.layers.DenseLayer(l_1, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
     mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
     log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    l_theta = ThetaLayer([mu,log_sigma],maxlen=MAX_LENGTH)#batchsize * maxlen * n_topic
+    l_theta = lasagne.layers.ElemwiseMergeLayer([mu,log_sigma],maxlen=MAX_LENGTH)#batchsize * maxlen * n_topic
 
     l_B = lasagne.layers.DenseLayer(l_in, b=None, num_units=n_topics, nonlinearity=None, num_leading_axes=2)
     l_context = lasagne.layers.ElemwiseMergeLayer([l_B, l_theta],T.mul)
     l_context = lasagne.layers.ExpressionLayer(l_context, lambda X: X.mean(-1), output_shape="auto")
 
     l_dense0 = lasagne.layers.DenseLayer(
-        l_forward, num_units=1, nonlinearity=None,num_leading_axes=2)
+        l_forward0, num_units=1, nonlinearity=None,num_leading_axes=2)
     l_dense1 = lasagne.layers.reshape(l_dense0, ([0], [1]))#batchsize * maxlen
     l_dense = lasagne.layers.ElemwiseMergeLayer([l_dense1, l_context],T.add)
     l_out0 = lasagne.layers.NonlinearityLayer(l_dense, nonlinearity=lasagne.nonlinearities.sigmoid)
@@ -492,19 +489,3 @@ def clustering(thetaPath, dataset):
     # print("\n")
     # outputCodes(indexs12, new_X)
     # print("\n")
-
-
-
-
-
-if __name__ == '__main__':
-    FLAGS = Config()
-    data_sets = PatientReader(FLAGS)
-    wordvecPath = os.path.join(FLAGS.data_path, "word2vec.vector")
-    W_embed = loadEmbeddingMatrix(wordvecPath)
-    # main(data_sets, W_embed)
-    # eval(2)
-
-    thetaPath = "theta_with_rnnvec/thetas_train0.npy"
-    clustering(thetaPath, data_sets)
-

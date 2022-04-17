@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 # THIS FILE IS REUSING THE CODE FROM THE PAPER'S CODE BASE AT https://github.com/danicaxiao/CONTENT/blob/master/CONTENT_fixedBatchSize.py
 # FULL CREDITATION IN THE README.MD
 
@@ -21,14 +15,11 @@ import matplotlib.pyplot as plt
 import theano
 import theano.tensor as T
 import lasagne
-from config import Config
-from patient_data_reader import PatientReader
-import os
 import time
 import numpy as np
-from lasagne.layers.timefusion import MaskingLayer
+# from lasagne.layers.timefusion import MaskingLayer # Cannot Find This Import Literally Anywhere in Existence Outside this Repos
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, accuracy_score, precision_recall_curve
-from lasagne.layers.theta import ThetaLayer
+# from lasagne.layers.theta import ThetaLayer # Cannot Find This Import Literally Anywhere in Existence Outside this Repos
 
 # Number of units in the hidden (recurrent) layer
 N_HIDDEN = 200
@@ -115,13 +106,13 @@ def main(data_sets):
         l_embed, N_HIDDEN, mask_input=l_mask, grad_clipping=GRAD_CLIP,
         only_return_final=False)
 
-    l_forward = MaskingLayer([l_forward, l_mask])
+    # l_forward = MaskingLayer([l_forward, l_mask])
 
     l_1 = lasagne.layers.DenseLayer(l_in, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
     l_2 = lasagne.layers.DenseLayer(l_1, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
     mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
     log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    l_theta = ThetaLayer([mu,log_sigma],maxlen = MAX_LENGTH)#batchsize * maxlen
+    l_theta = lasagne.layers.ElemwiseMergeLayer([mu,log_sigma],maxlen = MAX_LENGTH)#batchsize * maxlen
 
     l_dense0 = lasagne.layers.DenseLayer(
         l_forward, num_units=1, nonlinearity=None,num_leading_axes=2)
@@ -424,21 +415,4 @@ def clustering(thetaPath, dataset):
     # print("\n")
     # outputCodes(indexs12, new_X)
     # print("\n")
-
-
-
-
-if __name__ == '__main__':
-    FLAGS = Config()
-    data_sets = PatientReader(FLAGS)
-    #main(data_sets)
-    # thetaPath = "theta/thetas1.npy"
-    # clustering(thetaPath,data_sets)
-    eval(1)
-
-
-# In[ ]:
-
-
-
 

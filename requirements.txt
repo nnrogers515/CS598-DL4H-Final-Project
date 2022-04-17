@@ -6,3 +6,4 @@ matplotlib
 theano
 lasagne
 sklearn
+psutil

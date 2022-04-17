@@ -10,8 +10,8 @@
 import os
 import itertools
 import numpy as np
-import nltk
 import math
+import pickle
 
 
 # Util Functions From https://github.com/danicaxiao/CONTENT/blob/master/util.py
@@ -22,7 +22,7 @@ def save_pkl(path, dump):
 def load_pkl(path):
     with open(path, 'rb') as file:
         return pickle.load(file)
-    
+
 def save_npy(path, obj):
     np.save(path, obj)
 
@@ -34,7 +34,7 @@ def load_npy(path):
 max_visit_size = 300
 
 
-class PatientReader(object):
+class PatientDataLoader(object):
     def __init__(self, config):
         self.data_path = data_path = config.data_path
 
