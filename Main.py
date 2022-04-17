@@ -30,25 +30,22 @@ if __name__ == '__main__':
     # Now We Need to Setup our DataLoader and Config for the Model
     FLAGS = Configuration()
     data_set = PatientDataLoader(FLAGS)
-    word2vec = os.path.join(FLAGS.data_path, "word2vec.vector")
-    start = end = 0
+    iterator = data_set.iterator()
 
-    # if fixed:
-    #     thetaPath = "theta/thetas1.npy"
-    #     W_embed = contentFixed.loadEmbeddingMatrix(word2vec)
-    #     start = time.time()
-    #     contentFixed.run(data_set, W_embed)
-    #     end = time.time()
-    #     contentFixed.clustering(thetaPath, data_set)
-    #     contentFixed.eval(1)
-    # else:
-    #     thetaPath = "theta_with_rnnvec/thetas_train0.npy"
-    #     W_embed = content.loadEmbeddingMatrix(word2vec)
-    #     start = time.time()
-    #     content.run(data_set, W_embed)
-    #     end = time.time()
-    #     content.eval(2)
-    #     content.clustering(thetaPath, data_set)
+    if fixed:
+        thetaPath = "theta/thetas1.npy"
+        start = time.time()
+        contentFixed.run(data_set)
+        end = time.time()
+        contentFixed.clustering(thetaPath, data_set)
+        contentFixed.eval(1)
+    else:
+        thetaPath = "theta_with_rnnvec/thetas_train0.npy"
+        start = time.time()
+        content.run(data_set)
+        end = time.time()
+        # content.eval(2)
+        # content.clustering(thetaPath, data_set)
 
     print("Total GPU Time to Run Experiment: {}".format(end - start))
     process = psutil.Process(os.getpid())

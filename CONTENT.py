@@ -25,7 +25,7 @@ from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, accu
 # from lasagne.layers.theta import ThetaLayer # Cannot Find This Import Literally Anywhere in Existence Outside this Repos
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import average_precision_score as pr_auc
-
+from ThetaLayer import ThetaLayer
 # Number of units in the hidden (recurrent) layer
 N_HIDDEN = 200
 # Number of training sequences in each batch
@@ -37,7 +37,6 @@ GRAD_CLIP = 100
 EPOCH_SIZE = 100
 # Number of epochs to train the net
 num_epochs = 6
-
 
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
     assert len(inputs) == len(targets)
@@ -64,31 +63,15 @@ def iterate_minibatches_listinputs(inputs, batchsize, shuffle=False):
             excerpt = slice(start_idx, start_idx + batchsize)
         yield [input[excerpt] for input in inputs]
 
-def loadEmbeddingMatrix(wordvecFile):
-	fw = open(wordvecFile, "r")
-	headline = fw.readline().strip().split()
-	vocabSize = int(headline[0])
-	dim = int(headline[1])
-	W = np.zeros((vocabSize, dim)).astype(theano.config.floatX)
-	for line in fw:
-		tabs = line.strip().split()
 
-		vec = np.asarray([float(x) for x in tabs[1:]], dtype=theano.config.floatX)
-		ind = int(tabs[0])
-		W[ind-1] = vec
-	fw.close()
-	return W
-
-
-def run(data_sets, W_embed):
+def run(data_sets):
     # Optimization learning rate
     LEARNING_RATE = theano.shared(np.array(0.001, dtype=theano.config.floatX))
-    eta_decay = np.array(0.5, dtype=theano.config.floatX)
     # Min/max sequence length
     MAX_LENGTH = 300
     X_raw_data, Y_raw_data = data_sets.get_data_from_type("train")
     trainingAdmiSeqs, trainingMask, trainingLabels, trainingLengths, ltr = prepare_data(X_raw_data, Y_raw_data, vocabsize= 619, maxlen = MAX_LENGTH)
-    Num_Samples, MAX_LENGTH, N_VOCAB = trainingAdmiSeqs.shape
+    _, MAX_LENGTH, N_VOCAB = trainingAdmiSeqs.shape
 
     X_valid_data, Y_valid_data = data_sets.get_data_from_type("valid")
     validAdmiSeqs, validMask, validLabels, validLengths, lval  = prepare_data(X_valid_data, Y_valid_data, vocabsize= 619, maxlen = MAX_LENGTH)
@@ -129,13 +112,13 @@ def run(data_sets, W_embed):
 
     l_1 = lasagne.layers.DenseLayer(l_in, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
     l_2 = lasagne.layers.DenseLayer(l_1, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
-    mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    l_theta = lasagne.layers.ElemwiseMergeLayer([mu,log_sigma],maxlen=MAX_LENGTH)#batchsize * maxlen * n_topic
+    # mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
+    # log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
+    # l_theta = ThetaLayer([mu,log_sigma], maxlen=MAX_LENGTH)#batchsize * maxlen * n_topic
 
     l_B = lasagne.layers.DenseLayer(l_in, b=None, num_units=n_topics, nonlinearity=None, num_leading_axes=2)
-    l_context = lasagne.layers.ElemwiseMergeLayer([l_B, l_theta],T.mul)
-    l_context = lasagne.layers.ExpressionLayer(l_context, lambda X: X.mean(-1), output_shape="auto")
+    # l_context = lasagne.layers.ElemwiseMergeLayer([l_B, l_theta],T.mul)
+    l_context = lasagne.layers.ExpressionLayer(l_B, lambda X: X.mean(-1), output_shape="auto")
 
     l_dense0 = lasagne.layers.DenseLayer(
         l_forward0, num_units=1, nonlinearity=None,num_leading_axes=2)
@@ -156,7 +139,7 @@ def run(data_sets, W_embed):
     predicted_values = network_output.flatten()
     # Our cost will be mean-squared error
     cost = lasagne.objectives.binary_crossentropy(predicted_values, target_values_flat)
-    kl_term = l_theta.klterm
+    kl_term = 0 #l_theta.klterm
     cost = cost.sum()+kl_term
 
 
@@ -177,8 +160,8 @@ def run(data_sets, W_embed):
         [l_in.input_var, target_values, l_mask.input_var],cost)
     prd = theano.function([l_in.input_var, l_mask.input_var], test_output)
     #rnn_out = T.concatenate(l_theta.theta, lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN)),axis=1)
-    output_theta = theano.function([l_in.input_var, l_mask.input_var], [l_theta.theta, lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
-
+    # output_theta = theano.function([l_in.input_var, l_mask.input_var], [l_theta.theta, lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
+    output_theta = theano.function([l_in.input_var, l_mask.input_var], [lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
 
 
     print("Training ...")
@@ -193,9 +176,11 @@ def run(data_sets, W_embed):
                 inputs = batch
                 train_err += train(inputs[0], inputs[1], inputs[2])
                 train_batches += 1
-                theta_train, rnnvec_train = output_theta(inputs[0], inputs[2])
-                rnnout_train = np.concatenate([theta_train, rnnvec_train], axis=1)
-                thetas_train.append(rnnout_train.flatten())
+                # theta_train, rnnvec_train = output_theta(inputs[0], inputs[2])
+                rnnvec_train = output_theta(inputs[0], inputs[2])
+                # rnnout_train = np.concatenate([theta_train, rnnvec_train], axis=1)
+                rnnout_train = rnnvec_train
+                thetas_train.append(rnnout_train)
                 if (train_batches+1)% 1000 == 0:
                     print(train_batches)
 
@@ -241,19 +226,21 @@ def run(data_sets, W_embed):
                 leng = inputs[3][0]
                 new_testlabels.extend(inputs[1].flatten()[:leng])
                 pred_testlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
-                theta, rnnvec = output_theta(inputs[0], inputs[2])
-                rnnout = np.concatenate([theta, rnnvec],axis=1)
-                thetas.append(rnnout.flatten())
+                # theta, rnnvec = output_theta(inputs[0], inputs[2])
+                rnnvec = output_theta(inputs[0], inputs[2])
+                # rnnout = np.concatenate([theta, rnnvec],axis=1)
+                rnnout = rnnvec
+                thetas.append(rnnout)
                 test_batches += 1
             test_auc = roc_auc_score(new_testlabels, pred_testlabels)
             test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
-            # np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
-            # np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
-            # np.save("CONTENT_results/thetas"+str(epoch),thetas)
+            np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
+            np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
+            np.save("CONTENT_results/thetas"+str(epoch),thetas)
 
-            # np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
-            # np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
-            # np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
+            np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
+            np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
+            np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
 
 
             test_pre_rec_f1 = precision_recall_fscore_support(np.array(new_testlabels), np.array(pred_testlabels)>0.5, average='binary')
@@ -440,7 +427,7 @@ def clustering(thetaPath, dataset):
     tsn = TSNE(random_state=256,n_iter=2000).fit_transform(thetas)
     scatter(tsn, ypred)
     plt.show()
-    X_test_data, Y_test_data = data_sets.get_data_from_type("test")
+    X_test_data, Y_test_data = dataset.get_data_from_type("test")
     new_X = []
     for s in X_test_data:
         ss = []

@@ -65,7 +65,7 @@ def cut_sel(paddedMat, lengths):
         newVec.extend(paddedMat[i,:].flatten()[:lengths[i][0]])
     return newVec
 
-def main(data_sets):
+def run(data_sets):
     # Optimization learning rate
     LEARNING_RATE = theano.shared(np.array(0.001, dtype=theano.config.floatX))
     eta_decay = np.array(0.5, dtype=theano.config.floatX)
@@ -110,15 +110,15 @@ def main(data_sets):
 
     l_1 = lasagne.layers.DenseLayer(l_in, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
     l_2 = lasagne.layers.DenseLayer(l_1, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
-    mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    l_theta = lasagne.layers.ElemwiseMergeLayer([mu,log_sigma],maxlen = MAX_LENGTH)#batchsize * maxlen
+    # mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
+    # log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
+    # l_theta = lasagne.layers.ElemwiseMergeLayer([mu,log_sigma], T.mul, maxlen = MAX_LENGTH)#batchsize * maxlen
 
     l_dense0 = lasagne.layers.DenseLayer(
         l_forward, num_units=1, nonlinearity=None,num_leading_axes=2)
     l_dense1 = lasagne.layers.reshape(l_dense0, ([0], [1]))#batchsize * maxlen
-    l_dense = lasagne.layers.ElemwiseMergeLayer([l_dense1, l_theta],T.add)
-    l_out = lasagne.layers.NonlinearityLayer(l_dense,nonlinearity=lasagne.nonlinearities.sigmoid)
+    # l_dense = lasagne.layers.ElemwiseMergeLayer([l_dense1, l_theta],T.add)
+    l_out = lasagne.layers.NonlinearityLayer(l_dense1,nonlinearity=lasagne.nonlinearities.sigmoid)
 
 
 
@@ -132,7 +132,7 @@ def main(data_sets):
     predicted_values = network_output.flatten()
     # Our cost will be mean-squared error
     cost = lasagne.objectives.binary_crossentropy(predicted_values, target_values_flat)
-    kl_term = l_theta.klterm
+    kl_term = 0 # l_theta.klterm
     cost = cost.sum()+kl_term
 
 
