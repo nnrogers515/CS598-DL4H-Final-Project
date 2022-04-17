@@ -79,9 +79,9 @@ def run(data_sets):
     X_test_data, Y_test_data = data_sets.get_data_from_type("test")
     test_admiSeqs, test_mask, test_labels, testLengths, ltes = prepare_data(X_test_data, Y_test_data, vocabsize= 619, maxlen = MAX_LENGTH)
     alllength = sum(trainingLengths) + sum(validLengths) + sum(testLengths)
-    print(alllength)
+    # print(alllength)
     eventNum = sum(ltr)+sum(lval)+sum(ltes)
-    print(eventNum)
+    # print(eventNum)
 
 
 
@@ -185,7 +185,7 @@ def run(data_sets):
                     print(train_batches)
 
 
-            np.save("theta_with_rnnvec/thetas_train"+str(epoch),thetas_train)
+            # np.save("theta_with_rnnvec/thetas_train"+str(epoch),thetas_train)
 
 
             # # And a full pass over the validation data:
@@ -234,13 +234,13 @@ def run(data_sets):
                 test_batches += 1
             test_auc = roc_auc_score(new_testlabels, pred_testlabels)
             test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
-            np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
-            np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
-            np.save("CONTENT_results/thetas"+str(epoch),thetas)
+            # np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
+            # np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
+            # np.save("CONTENT_results/thetas"+str(epoch),thetas)
 
-            np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
-            np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
-            np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
+            # np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
+            # np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
+            # np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
 
 
             test_pre_rec_f1 = precision_recall_fscore_support(np.array(new_testlabels), np.array(pred_testlabels)>0.5, average='binary')
@@ -251,7 +251,7 @@ def run(data_sets):
             print("  test pr_auc:\t\t{:.6f}".format(test_pr_auc))
             print("  test accuracy:\t\t{:.2f} %".format(
                 test_acc * 100))
-            print("  test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0], test_pre_rec_f1[1], test_pre_rec_f1[2]))
+            print("  test Precision, Recall and F1:\t\t{:.4f} \t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0], test_pre_rec_f1[1], test_pre_rec_f1[2]))
 
     except KeyboardInterrupt:
         pass
