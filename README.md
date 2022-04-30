@@ -16,11 +16,58 @@ The code in this repository is either re-used or heavily based off the code from
 
 NOTE: If you are unable to use `make` then use `python3 Main.py new` for a new run or `python3 Main.py` instead of `make run`. There is also the fixed batch size version of the code which can be ran through `python3 Main.py new_fixed` or `python3 Main.py fixed` but this is still a work-in-progress so ignore this for now.
 
+
+## How to Train
+
+In the Project Directory after all dependencies have been installed, run the command:
+
+```bash
+make train
+```
+
+or if you don't have `make`, run the command:
+
+```bash
+python3 main.py train
+```
+This will train, test, and save the model locally
+## How to Test
+
+In the Project Directory after all dependencies have been installed, run the command:
+
+```bash
+make test
+```
+
+or if you don't have `make`, run the command:
+
+```bash
+python3 main.py test
+```
+
+This will test the trained model (named `model`) in the project directory against the dataset in `data/S1_File.txt`
+
+
+## How to Evaluate
+
+In the Project Directory after all dependencies have been installed, run the command:
+
+```bash
+make eval
+```
+
+or if you don't have `make`, run the command:
+
+```bash
+python3 main.py eval
+```
+
+This will evaluate the test results as done in the original project, creating a clustering map that can be viewed in the folder titled `evaluation_results`
 ## Code Flow
 
 1. Data Pre-Processing Code can be found in `DataPrep.py`
-2. Training and Evaluation Code are found in either `CONTENT.py` or `CONTENT_FixedBatch.py`
-3. The Pretrained model will be stored in the `model/` folder in this repository (WIP)
+2. Training, Testing and Evaluation Code are found in either `CONTENT.py` or `CONTENT_FixedBatch.py`
+3. The Pretrained model will be stored as `model` in this repository (WIP)
 
 ## Results Table
 

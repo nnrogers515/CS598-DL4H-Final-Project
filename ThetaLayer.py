@@ -5,6 +5,7 @@ import numpy as np
 
 class ThetaLayer(lasagne.layers.Layer):
     def __init__(self, incomings, **kwargs):
+        super().__init__(incomings, name="Theta")
         self.logsigma = incomings[1]
         self.mu = incomings[0]
         self.klterm = 0

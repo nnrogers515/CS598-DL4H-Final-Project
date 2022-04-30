@@ -108,16 +108,18 @@ def run(data_sets):
         l_embed, N_HIDDEN, mask_input=l_mask, grad_clipping=GRAD_CLIP,
         only_return_final=False)
 
-    # l_forward = MaskingLayer([l_forward0, l_mask])
+    # Masking is Already Handled in the RNN Layer Internally through mask_input and therefore this
+    # Is likely Redundant? Unable to Check Since this layer doesn't exist
+    # l_forward0 = MaskingLayer([l_forward0, l_mask])
 
     l_1 = lasagne.layers.DenseLayer(l_in, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
     l_2 = lasagne.layers.DenseLayer(l_1, num_units=N_HIDDEN, nonlinearity=lasagne.nonlinearities.rectify, num_leading_axes=2)
-    # mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    # log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
-    # l_theta = ThetaLayer([mu,log_sigma], maxlen=MAX_LENGTH)#batchsize * maxlen * n_topic
+    mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
+    log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
+    l_theta = ThetaLayer([mu,log_sigma], maxlen=MAX_LENGTH)#batchsize * maxlen * n_topic
 
     l_B = lasagne.layers.DenseLayer(l_in, b=None, num_units=n_topics, nonlinearity=None, num_leading_axes=2)
-    # l_context = lasagne.layers.ElemwiseMergeLayer([l_B, l_theta],T.mul)
+    l_context = lasagne.layers.ElemwiseMergeLayer([l_B, l_theta],T.mul)
     l_context = lasagne.layers.ExpressionLayer(l_B, lambda X: X.mean(-1), output_shape="auto")
 
     l_dense0 = lasagne.layers.DenseLayer(
@@ -139,7 +141,7 @@ def run(data_sets):
     predicted_values = network_output.flatten()
     # Our cost will be mean-squared error
     cost = lasagne.objectives.binary_crossentropy(predicted_values, target_values_flat)
-    kl_term = 0 #l_theta.klterm
+    kl_term = l_theta.klterm
     cost = cost.sum()+kl_term
 
 
@@ -160,8 +162,8 @@ def run(data_sets):
         [l_in.input_var, target_values, l_mask.input_var],cost)
     prd = theano.function([l_in.input_var, l_mask.input_var], test_output)
     #rnn_out = T.concatenate(l_theta.theta, lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN)),axis=1)
-    # output_theta = theano.function([l_in.input_var, l_mask.input_var], [l_theta.theta, lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
-    output_theta = theano.function([l_in.input_var, l_mask.input_var], [lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
+    output_theta = theano.function([l_in.input_var, l_mask.input_var], [l_theta.theta, lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
+    # output_theta = theano.function([l_in.input_var, l_mask.input_var], [lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
 
 
     print("Training ...")
@@ -176,9 +178,9 @@ def run(data_sets):
                 inputs = batch
                 train_err += train(inputs[0], inputs[1], inputs[2])
                 train_batches += 1
-                # theta_train, rnnvec_train = output_theta(inputs[0], inputs[2])
-                rnnvec_train = output_theta(inputs[0], inputs[2])
-                # rnnout_train = np.concatenate([theta_train, rnnvec_train], axis=1)
+                theta_train, rnnvec_train = output_theta(inputs[0], inputs[2])
+                # rnnvec_train = output_theta(inputs[0], inputs[2])
+                rnnout_train = np.concatenate([theta_train, rnnvec_train], axis=1)
                 rnnout_train = rnnvec_train
                 thetas_train.append(rnnout_train)
                 if (train_batches+1)% 1000 == 0:
@@ -226,9 +228,9 @@ def run(data_sets):
                 leng = inputs[3][0]
                 new_testlabels.extend(inputs[1].flatten()[:leng])
                 pred_testlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
-                # theta, rnnvec = output_theta(inputs[0], inputs[2])
-                rnnvec = output_theta(inputs[0], inputs[2])
-                # rnnout = np.concatenate([theta, rnnvec],axis=1)
+                theta, rnnvec = output_theta(inputs[0], inputs[2])
+                # rnnvec = output_theta(inputs[0], inputs[2])
+                rnnout = np.concatenate([theta, rnnvec],axis=1)
                 rnnout = rnnvec
                 thetas.append(rnnout)
                 test_batches += 1
