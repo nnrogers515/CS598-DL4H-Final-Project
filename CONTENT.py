@@ -17,6 +17,7 @@ from __future__ import print_function
 import matplotlib.pyplot as plt
 import theano
 import theano.tensor as T
+import os
 import lasagne
 import time
 import numpy as np
@@ -26,6 +27,8 @@ from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, accu
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import average_precision_score as pr_auc
 from ThetaLayer import ThetaLayer
+import pickle
+
 # Number of units in the hidden (recurrent) layer
 N_HIDDEN = 200
 # Number of training sequences in each batch
@@ -64,7 +67,7 @@ def iterate_minibatches_listinputs(inputs, batchsize, shuffle=False):
         yield [input[excerpt] for input in inputs]
 
 
-def run(data_sets):
+def run(data_sets, train=True, continued=False):
     # Optimization learning rate
     LEARNING_RATE = theano.shared(np.array(0.001, dtype=theano.config.floatX))
     # Min/max sequence length
@@ -153,7 +156,14 @@ def run(data_sets):
 
     # Compute SGD updates for training
     print("Computing updates ...")
-    updates = lasagne.updates.adam(cost, all_params, LEARNING_RATE)
+    if train and not continued:
+        updates = lasagne.updates.adam(cost, all_params, LEARNING_RATE)
+    elif os.path.exists("model.pckl"):
+        with open("model.pckl") as f:
+            updates = pickle.load(f)
+    else:
+        raise Exception("No Pre-Trained Model is Available!!! Make Sure to Run Training First!")
+
     # Theano functions for training and computing cost
     print("Compiling functions ...")
     train = theano.function([l_in.input_var, target_values, l_mask.input_var],
@@ -165,95 +175,105 @@ def run(data_sets):
     output_theta = theano.function([l_in.input_var, l_mask.input_var], [l_theta.theta, lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
     # output_theta = theano.function([l_in.input_var, l_mask.input_var], [lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
 
-
-    print("Training ...")
     try:
         for epoch in range(num_epochs):
-            train_err = 0
-            train_batches = 0
-            start_time = time.time()
-            thetas_train = []
-            for batch in iterate_minibatches_listinputs([trainingAdmiSeqs, trainingLabels, trainingMask], N_BATCH,
-                                                        shuffle=True):
-                inputs = batch
-                train_err += train(inputs[0], inputs[1], inputs[2])
-                train_batches += 1
-                theta_train, rnnvec_train = output_theta(inputs[0], inputs[2])
-                # rnnvec_train = output_theta(inputs[0], inputs[2])
-                rnnout_train = np.concatenate([theta_train, rnnvec_train], axis=1)
-                rnnout_train = rnnvec_train
-                thetas_train.append(rnnout_train)
-                if (train_batches+1)% 1000 == 0:
-                    print(train_batches)
+            print ("Training...")
+            if train:
+                train_err = 0
+                train_batches = 0
+                start_time = time.time()
+                thetas_train = []
+                for batch in iterate_minibatches_listinputs([trainingAdmiSeqs, trainingLabels, trainingMask], N_BATCH,
+                                                            shuffle=True):
+                    inputs = batch
+                    train_err += train(inputs[0], inputs[1], inputs[2])
+                    train_batches += 1
+                    theta_train, rnnvec_train = output_theta(inputs[0], inputs[2])
+                    # rnnvec_train = output_theta(inputs[0], inputs[2])
+                    rnnout_train = np.concatenate([theta_train, rnnvec_train], axis=1)
+                    # rnnout_train = rnnvec_train
+                    thetas_train.append(rnnout_train)
+                    if (train_batches+1)% 1000 == 0:
+                        print(train_batches)
 
 
-            # np.save("theta_with_rnnvec/thetas_train"+str(epoch),thetas_train)
+                np.save("theta_with_rnnvec/thetas_train"+str(epoch),thetas_train)
 
 
-            # # And a full pass over the validation data:
-            # val_err = 0
-            # val_acc = 0
-            # val_batches = 0
-            # new_validlabels = []
-            # pred_validlabels = []
-            # for batch in iterate_minibatches_listinputs([validAdmiSeqs, validLabels, validMask, validLengths], 1, shuffle=False):
-            #     inputs = batch
-            #     err = compute_cost(inputs[0], inputs[1], inputs[2])
-            #     val_err += err
-            #     leng = inputs[3][0]
-            #     new_validlabels.extend(inputs[1].flatten()[:leng])
-            #     pred_validlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
-            #     val_batches += 1
-            # val_auc = roc_auc_score(new_validlabels, pred_validlabels)
-            # Then we print the results for this epoch:
-            print("Epoch {} of {} took {:.3f}s".format(
-                epoch + 1, num_epochs, time.time() - start_time))
-            print("  training loss:\t\t{:.6f}".format(train_err / train_batches))
-            # print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
-            # print("  validation auc:\t\t{:.6f}".format(val_auc))
-            # print("  validation accuracy:\t\t{:.2f} %".format(
-            #     val_acc / val_batches * 100))
+                # # And a full pass over the validation data:
+                print("Validating...")
+                val_err = 0
+                val_acc = 0
+                val_batches = 0
+                new_validlabels = []
+                pred_validlabels = []
+                for batch in iterate_minibatches_listinputs([validAdmiSeqs, validLabels, validMask, validLengths], 1, shuffle=False):
+                    inputs = batch
+                    err = compute_cost(inputs[0], inputs[1], inputs[2])
+                    val_err += err
+                    leng = inputs[3][0]
+                    new_validlabels.extend(inputs[1].flatten()[:leng])
+                    pred_validlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
+                    val_batches += 1
+                val_auc = roc_auc_score(new_validlabels, pred_validlabels)
+                val_acc = accuracy_score(np.array(new_validlabels), np.array(pred_validlabels) > 0.5)
+                # Then we print the results for this epoch:
+                print("Epoch {} of {} took {:.3f}s".format(
+                    epoch + 1, num_epochs, time.time() - start_time))
+                print("  training loss:\t\t{:.6f}".format(train_err / train_batches))
+                print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
+                print("  validation auc:\t\t{:.6f}".format(val_auc))
+                print("  validation accuracy:\t\t{:.2f} %".format(
+                    val_acc * 100))
 
-            # After training, we compute and print the test error:
-            test_err = 0
+            
 
-            test_batches = 0
-            new_testlabels = []
-            pred_testlabels = []
-            thetas = []
-            for batch in iterate_minibatches_listinputs([test_admiSeqs, test_labels, test_mask, testLengths], 1, shuffle=False):
-                inputs = batch
-                err = compute_cost(inputs[0], inputs[1], inputs[2])
-                test_err += err
-                leng = inputs[3][0]
-                new_testlabels.extend(inputs[1].flatten()[:leng])
-                pred_testlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
-                theta, rnnvec = output_theta(inputs[0], inputs[2])
-                # rnnvec = output_theta(inputs[0], inputs[2])
-                rnnout = np.concatenate([theta, rnnvec],axis=1)
-                rnnout = rnnvec
-                thetas.append(rnnout)
-                test_batches += 1
-            test_auc = roc_auc_score(new_testlabels, pred_testlabels)
-            test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
-            # np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
-            # np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
-            # np.save("CONTENT_results/thetas"+str(epoch),thetas)
+            else:
+                # After training, we compute and print the test error:
+                print("Testing...")
+                test_err = 0
 
-            # np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
-            # np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
-            # np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
+                test_batches = 0
+                new_testlabels = []
+                pred_testlabels = []
+                thetas = []
+                for batch in iterate_minibatches_listinputs([test_admiSeqs, test_labels, test_mask, testLengths], 1, shuffle=False):
+                    inputs = batch
+                    err = compute_cost(inputs[0], inputs[1], inputs[2])
+                    test_err += err
+                    leng = inputs[3][0]
+                    new_testlabels.extend(inputs[1].flatten()[:leng])
+                    pred_testlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
+                    theta, rnnvec = output_theta(inputs[0], inputs[2])
+                    # rnnvec = output_theta(inputs[0], inputs[2])
+                    rnnout = np.concatenate([theta, rnnvec],axis=1)
+                    # rnnout = rnnvec
+                    thetas.append(rnnout)
+                    test_batches += 1
+                test_auc = roc_auc_score(new_testlabels, pred_testlabels)
+                test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
+                np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
+                np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
+                np.save("CONTENT_results/thetas"+str(epoch),thetas)
+
+                np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
+                np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
+                np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
 
 
-            test_pre_rec_f1 = precision_recall_fscore_support(np.array(new_testlabels), np.array(pred_testlabels)>0.5, average='binary')
-            test_acc = accuracy_score(np.array(new_testlabels), np.array(pred_testlabels)>0.5)
-            print("Final results:")
-            print("  test loss:\t\t{:.6f}".format(test_err / test_batches))
-            print("  test auc:\t\t{:.6f}".format(test_auc))
-            print("  test pr_auc:\t\t{:.6f}".format(test_pr_auc))
-            print("  test accuracy:\t\t{:.2f} %".format(
-                test_acc * 100))
-            print("  test Precision, Recall and F1:\t\t{:.4f} \t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0], test_pre_rec_f1[1], test_pre_rec_f1[2]))
+                test_pre_rec_f1 = precision_recall_fscore_support(np.array(new_testlabels), np.array(pred_testlabels)>0.5, average='binary')
+                test_acc = accuracy_score(np.array(new_testlabels), np.array(pred_testlabels)>0.5)
+                print("Final results:")
+                print("  test loss:\t\t{:.6f}".format(test_err / test_batches))
+                print("  test auc:\t\t{:.6f}".format(test_auc))
+                print("  test pr_auc:\t\t{:.6f}".format(test_pr_auc))
+                print("  test accuracy:\t\t{:.2f} %".format(
+                    test_acc * 100))
+                print("  test Precision, Recall and F1:\t\t{:.4f} \t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0], test_pre_rec_f1[1], test_pre_rec_f1[2]))
+
+        if train:
+            with open("model.pckl", "wb+") as f:
+                pickle.dump(updates, f)
 
     except KeyboardInterrupt:
         pass

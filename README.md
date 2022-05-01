@@ -10,14 +10,16 @@ The code in this repository is either re-used or heavily based off the code from
 3. Due to additional import complications, you will also need to manually upgrade versions for Lasagne using the follow commands (Don't worry if it says it failed to install the wheel, as long as it says `Successfully installed Lasagne-0.2.dev1` and `Successfully installed Theano-1.0.5+unknown` you should be fine):
    1. `pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip`
    2. `pip install --upgrade https://github.com/Theano/Theano/archive/master.zip`
-4. On the first run, it is best to use `make new` which should provide a setup for the input dataset provided or download the data directly if no dataset at the path `data/S1_File.txt` exists.
-5. For further runs, you can simply run `make run` and the model should run it's classification based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file. For convenience, the data folder will be created with already pre-processed files but S1_File.txt will be repulled through the code if needed as it is quite large.
+4. On the first setup, it is best to use `make new` which should provide a setup for the input dataset provided or download the data directly if no dataset at the path `data/S1_File.txt` exists.
+5. Then for a general run with training and testing you can simply use `make run` and the model should be trained and then tested on its classification based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file. For convenience, the data folder will be created with already pre-processed files but S1_File.txt will be repulled through the code if needed as it is quite large.
 6. If you wish to make any changes to how the model is trained you can edit the `Configuration.py` file and use `make new` again, the splits for the data can be adjusted at the top of `DataPrep.py` should you have new data with different split dimensions.
 
 NOTE: If you are unable to use `make` then use `python3 Main.py new` for a new run or `python3 Main.py` instead of `make run`. There is also the fixed batch size version of the code which can be ran through `python3 Main.py new_fixed` or `python3 Main.py fixed` but this is still a work-in-progress so ignore this for now.
 
-
+For more specific ways to train, test, and evaluate see the sections below. Make sure you use `make new` before using them!
 ## How to Train
+
+Make sure you have already run `make new`:
 
 In the Project Directory after all dependencies have been installed, run the command:
 
@@ -30,8 +32,10 @@ or if you don't have `make`, run the command:
 ```bash
 python3 main.py train
 ```
-This will train, test, and save the model locally
+This will train, run against validation data and save the model locally
 ## How to Test
+
+Make sure you have already run `make new`:
 
 In the Project Directory after all dependencies have been installed, run the command:
 
@@ -45,10 +49,12 @@ or if you don't have `make`, run the command:
 python3 main.py test
 ```
 
-This will test the trained model (named `model`) in the project directory against the dataset in `data/S1_File.txt`
-
+This will test the trained model (named `model.pckl`) in the project directory against the dataset loaded from `data/S1_File.txt`
+Note: If the pretrained model isn't available you will have to train one first
 
 ## How to Evaluate
+
+Make sure you have already run `make new`:
 
 In the Project Directory after all dependencies have been installed, run the command:
 
@@ -62,12 +68,13 @@ or if you don't have `make`, run the command:
 python3 main.py eval
 ```
 
-This will evaluate the test results as done in the original project, creating a clustering map that can be viewed in the folder titled `evaluation_results`
+This will evaluate the model results as done in the original project through clustering that can be viewed in the folder titled `evaluation_results`
+This uses output from the training runs rather than the model itself, so note you will have to run training and testing for this to update
 ## Code Flow
 
 1. Data Pre-Processing Code can be found in `DataPrep.py`
 2. Training, Testing and Evaluation Code are found in either `CONTENT.py` or `CONTENT_FixedBatch.py`
-3. The Pretrained model will be stored as `model` in this repository (WIP)
+3. The Pretrained model will be stored as `model.pckl` in this repository
 
 ## Results Table
 
