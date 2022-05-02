@@ -31,12 +31,15 @@ if __name__ == '__main__':
     # First Let's Get Our Data Prepped
     # If this is a new input file with new splits, we need to run this, otherwise we can skip
     if new or not os.path.exists("data/X_train.pkl"):
+        print("Setting Up and Preprocessing Data... This May Take a While!!!")
+        start = time.time()
         data = dp.retrieve_data(False) # Retrieves Input Data If it doesn't already exist
         dp.data_to_csv(data) # Writes vocab and stop files based on Input
         word2ind = dp.load_data_from_file() # Loads vocab from csv files into word2ind vector
         events = dp.extract_events() # Extracts Events From Input File
         data, labels = dp.convert_format(word2ind, events) # Converts Data into More Useful Format
         dp.splits(data, labels) # Creates Training, Validation, and Testing Splits and Writes them to Pickled Files
+        end = time.time()
 
     # Now We Need to Setup our DataLoader and Config for the Model
     FLAGS = Configuration()
@@ -55,7 +58,7 @@ if __name__ == '__main__':
     elif train or test:
         thetaPath = "theta_with_rnnvec/thetas_train0.npy"
         start = time.time()
-        content.run(data_set, train=train, continued=continue_training)
+        content.run(data_set, isTrain=train, continued=continue_training)
         end = time.time()
 
     if (isEval):

@@ -1,18 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 '''
 Recurrent network example.  Trains a bidirectional vanilla RNN to output the
 sum of two numbers in a sequence of random numbers sampled uniformly from
 [0, 1] based on a separate marker sequence.
 '''
-
-from __future__ import print_function
 
 import matplotlib.pyplot as plt
 import theano
@@ -26,20 +19,23 @@ from sklearn.metrics import precision_recall_fscore_support, roc_auc_score, accu
 # from lasagne.layers.theta import ThetaLayer # Cannot Find This Import Literally Anywhere in Existence Outside this Repos
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import average_precision_score as pr_auc
+from torch import threshold
 from ThetaLayer import ThetaLayer
-import pickle
+from Configuration import Configuration
+
+FLAGS = Configuration()
 
 # Number of units in the hidden (recurrent) layer
-N_HIDDEN = 200
+N_HIDDEN = FLAGS.n_hidden
 # Number of training sequences in each batch
 
 
 # All gradients above this will be clipped
-GRAD_CLIP = 100
+GRAD_CLIP = FLAGS.grad_clip
 # How often should we check the output?
-EPOCH_SIZE = 100
+EPOCH_SIZE = FLAGS.epoch_size
 # Number of epochs to train the net
-num_epochs = 6
+num_epochs = FLAGS.total_epoch
 
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
     assert len(inputs) == len(targets)
@@ -67,29 +63,29 @@ def iterate_minibatches_listinputs(inputs, batchsize, shuffle=False):
         yield [input[excerpt] for input in inputs]
 
 
-def run(data_sets, train=True, continued=False):
+def run(data_sets, isTrain=True, continued=False):
     # Optimization learning rate
-    LEARNING_RATE = theano.shared(np.array(0.001, dtype=theano.config.floatX))
+    LEARNING_RATE = theano.shared(np.array(FLAGS.learning_rate, dtype=theano.config.floatX))
     # Min/max sequence length
     MAX_LENGTH = 300
     X_raw_data, Y_raw_data = data_sets.get_data_from_type("train")
-    trainingAdmiSeqs, trainingMask, trainingLabels, trainingLengths, ltr = prepare_data(X_raw_data, Y_raw_data, vocabsize= 619, maxlen = MAX_LENGTH)
+    trainingAdmiSeqs, trainingMask, trainingLabels, trainingLengths, ltr = prepare_data(X_raw_data, Y_raw_data, vocabsize=FLAGS.vocab_size, maxlen = MAX_LENGTH)
     _, MAX_LENGTH, N_VOCAB = trainingAdmiSeqs.shape
 
     X_valid_data, Y_valid_data = data_sets.get_data_from_type("valid")
-    validAdmiSeqs, validMask, validLabels, validLengths, lval  = prepare_data(X_valid_data, Y_valid_data, vocabsize= 619, maxlen = MAX_LENGTH)
+    validAdmiSeqs, validMask, validLabels, validLengths, lval  = prepare_data(X_valid_data, Y_valid_data, vocabsize=FLAGS.vocab_size, maxlen = MAX_LENGTH)
 
     X_test_data, Y_test_data = data_sets.get_data_from_type("test")
-    test_admiSeqs, test_mask, test_labels, testLengths, ltes = prepare_data(X_test_data, Y_test_data, vocabsize= 619, maxlen = MAX_LENGTH)
-    alllength = sum(trainingLengths) + sum(validLengths) + sum(testLengths)
+    test_admiSeqs, test_mask, test_labels, testLengths, ltes = prepare_data(X_test_data, Y_test_data, vocabsize=FLAGS.vocab_size, maxlen = MAX_LENGTH)
+    # alllength = sum(trainingLengths) + sum(validLengths) + sum(testLengths)
     # print(alllength)
-    eventNum = sum(ltr)+sum(lval)+sum(ltes)
+    # eventNum = sum(ltr)+sum(lval)+sum(ltes)
     # print(eventNum)
 
 
 
     print("Building network ...")
-    N_BATCH = 1
+    N_BATCH = FLAGS.batch_size
     # First, we build the network, starting with an input layer
     # Recurrent layers expect input of shape
     # (batch size, max sequence length, number of features)
@@ -101,8 +97,8 @@ def run(data_sets, train=True, continued=False):
     # which indices are part of the sequence for each batch entry, they are
     # supplied as matrices of dimensionality (N_BATCH, MAX_LENGTH)
     l_mask = lasagne.layers.InputLayer(shape=(N_BATCH, MAX_LENGTH))
-    embedsize = 100
-    n_topics = 50
+    embedsize = FLAGS.projector_embed_dim
+    n_topics = FLAGS.n_topics
     #l_embed = lasagne.layers.DenseLayer(l_in, num_units=embedsize, b=None, W = W_embed, num_leading_axes=2)
     l_embed = lasagne.layers.DenseLayer(l_in, num_units=embedsize, b=None, num_leading_axes=2)
     #l_embed.params[l_embed.W].remove("trainable")
@@ -120,7 +116,6 @@ def run(data_sets, train=True, continued=False):
     mu = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
     log_sigma = lasagne.layers.DenseLayer(l_2, num_units=n_topics, nonlinearity=None, num_leading_axes=1)# batchsize * n_topic
     l_theta = ThetaLayer([mu,log_sigma], maxlen=MAX_LENGTH)#batchsize * maxlen * n_topic
-
     l_B = lasagne.layers.DenseLayer(l_in, b=None, num_units=n_topics, nonlinearity=None, num_leading_axes=2)
     l_context = lasagne.layers.ElemwiseMergeLayer([l_B, l_theta],T.mul)
     l_context = lasagne.layers.ExpressionLayer(l_B, lambda X: X.mean(-1), output_shape="auto")
@@ -133,20 +128,28 @@ def run(data_sets, train=True, continued=False):
     l_out = lasagne.layers.ExpressionLayer(lasagne.layers.ElemwiseMergeLayer([l_out0, l_mask],T.mul), lambda X:X+0.000001)
 
 
-
     target_values = T.matrix('target_output')
     target_values_flat = T.flatten(target_values)
+
+    if (continued or (not isTrain)):
+        if os.path.exists("model.npz"):
+            with np.load('model.npz') as f:
+                param_values = [f['arr_%d' % i] for i in range(len(f.files))]
+            lasagne.layers.set_all_param_values(l_out, param_values)
+        else:
+            raise Exception("There is no pre-trained model in the Current Directory!!! Please make sure you run `make train` before using `make train_continued` or `make test`")
+
 
     # lasagne.layers.get_output produces a variable for the output of the net
     network_output = lasagne.layers.get_output(l_out)
     # The network output will have shape (n_batch, maxlen); let's flatten to get a
     # 1-dimensional vector of predicted values
     predicted_values = network_output.flatten()
+
     # Our cost will be mean-squared error
     cost = lasagne.objectives.binary_crossentropy(predicted_values, target_values_flat)
-    kl_term = l_theta.klterm
+    kl_term = l_theta.klterm # WE HAVE TO DROP THE CUSTOM LAYER AS THE CODE HAS WAY BIGGER PROBLEMS TO FIX
     cost = cost.sum()+kl_term
-
 
     test_output = lasagne.layers.get_output(l_out, deterministic=True)
 
@@ -155,14 +158,7 @@ def run(data_sets, train=True, continued=False):
     all_params = lasagne.layers.get_all_params(l_out)
 
     # Compute SGD updates for training
-    print("Computing updates ...")
-    if train and not continued:
-        updates = lasagne.updates.adam(cost, all_params, LEARNING_RATE)
-    elif os.path.exists("model.pckl"):
-        with open("model.pckl") as f:
-            updates = pickle.load(f)
-    else:
-        raise Exception("No Pre-Trained Model is Available!!! Make Sure to Run Training First!")
+    updates = lasagne.updates.adam(cost, all_params, LEARNING_RATE)
 
     # Theano functions for training and computing cost
     print("Compiling functions ...")
@@ -176,9 +172,9 @@ def run(data_sets, train=True, continued=False):
     # output_theta = theano.function([l_in.input_var, l_mask.input_var], [lasagne.layers.get_output(l_forward0)[:,-1,:].reshape((N_BATCH, N_HIDDEN))], on_unused_input='ignore')
 
     try:
-        for epoch in range(num_epochs):
+        if isTrain:
             print ("Training...")
-            if train:
+            for epoch in range(num_epochs):
                 train_err = 0
                 train_batches = 0
                 start_time = time.time()
@@ -216,7 +212,7 @@ def run(data_sets, train=True, continued=False):
                     pred_validlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
                     val_batches += 1
                 val_auc = roc_auc_score(new_validlabels, pred_validlabels)
-                val_acc = accuracy_score(np.array(new_validlabels), np.array(pred_validlabels) > 0.5)
+                val_acc = accuracy_score(np.array(new_validlabels), np.array(pred_validlabels) > FLAGS.threshold)
                 # Then we print the results for this epoch:
                 print("Epoch {} of {} took {:.3f}s".format(
                     epoch + 1, num_epochs, time.time() - start_time))
@@ -226,54 +222,52 @@ def run(data_sets, train=True, continued=False):
                 print("  validation accuracy:\t\t{:.2f} %".format(
                     val_acc * 100))
 
-            
+            # Save the Model Param Values
+            np.savez('model.npz', *lasagne.layers.get_all_param_values(l_out))
 
-            else:
-                # After training, we compute and print the test error:
-                print("Testing...")
-                test_err = 0
+        else:
+            # After training, we compute and print the test error:
+            print("Testing...")
+            epoch = 0 # We Only run one epoch for test
+            test_err = 0
 
-                test_batches = 0
-                new_testlabels = []
-                pred_testlabels = []
-                thetas = []
-                for batch in iterate_minibatches_listinputs([test_admiSeqs, test_labels, test_mask, testLengths], 1, shuffle=False):
-                    inputs = batch
-                    err = compute_cost(inputs[0], inputs[1], inputs[2])
-                    test_err += err
-                    leng = inputs[3][0]
-                    new_testlabels.extend(inputs[1].flatten()[:leng])
-                    pred_testlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
-                    theta, rnnvec = output_theta(inputs[0], inputs[2])
-                    # rnnvec = output_theta(inputs[0], inputs[2])
-                    rnnout = np.concatenate([theta, rnnvec],axis=1)
-                    # rnnout = rnnvec
-                    thetas.append(rnnout)
-                    test_batches += 1
-                test_auc = roc_auc_score(new_testlabels, pred_testlabels)
-                test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
-                np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
-                np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
-                np.save("CONTENT_results/thetas"+str(epoch),thetas)
+            test_batches = 0
+            new_testlabels = []
+            pred_testlabels = []
+            thetas = []
+            for batch in iterate_minibatches_listinputs([test_admiSeqs, test_labels, test_mask, testLengths], 1, shuffle=False):
+                inputs = batch
+                err = compute_cost(inputs[0], inputs[1], inputs[2])
+                test_err += err
+                leng = inputs[3][0]
+                new_testlabels.extend(inputs[1].flatten()[:leng])
+                pred_testlabels.extend(prd(inputs[0], inputs[2]).flatten()[:leng])
+                theta, rnnvec = output_theta(inputs[0], inputs[2])
+                # rnnvec = output_theta(inputs[0], inputs[2])
+                rnnout = np.concatenate([theta, rnnvec],axis=1)
+                # rnnout = rnnvec
+                thetas.append(rnnout)
+                test_batches += 1
+            test_auc = roc_auc_score(new_testlabels, pred_testlabels)
+            test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
+            np.save("CONTENT_results/testlabels_"+str(epoch),new_testlabels)
+            np.save("CONTENT_results/predlabels_"+str(epoch),pred_testlabels)
+            np.save("CONTENT_results/thetas"+str(epoch),thetas)
 
-                np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
-                np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
-                np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
+            np.save("theta_with_rnnvec/testlabels_"+str(epoch),new_testlabels)
+            np.save("theta_with_rnnvec/predlabels_"+str(epoch),pred_testlabels)
+            np.save("theta_with_rnnvec/thetas"+str(epoch),thetas)
 
 
-                test_pre_rec_f1 = precision_recall_fscore_support(np.array(new_testlabels), np.array(pred_testlabels)>0.5, average='binary')
-                test_acc = accuracy_score(np.array(new_testlabels), np.array(pred_testlabels)>0.5)
-                print("Final results:")
-                print("  test loss:\t\t{:.6f}".format(test_err / test_batches))
-                print("  test auc:\t\t{:.6f}".format(test_auc))
-                print("  test pr_auc:\t\t{:.6f}".format(test_pr_auc))
-                print("  test accuracy:\t\t{:.2f} %".format(
-                    test_acc * 100))
-                print("  test Precision, Recall and F1:\t\t{:.4f} \t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0], test_pre_rec_f1[1], test_pre_rec_f1[2]))
-
-        if train:
-            with open("model.pckl", "wb+") as f:
-                pickle.dump(updates, f)
+            test_pre_rec_f1 = precision_recall_fscore_support(np.array(new_testlabels), np.array(pred_testlabels) > FLAGS.threshold, average='binary')
+            test_acc = accuracy_score(np.array(new_testlabels), np.array(pred_testlabels) > FLAGS.threshold)
+            print("Final results:")
+            print("  test loss:\t\t{:.6f}".format(test_err / test_batches))
+            print("  test auc:\t\t{:.6f}".format(test_auc))
+            print("  test pr_auc:\t\t{:.6f}".format(test_pr_auc))
+            print("  test accuracy:\t\t{:.2f} %".format(
+                test_acc * 100))
+            print("  test Precision, Recall and F1:\t\t{:.4f} \t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0], test_pre_rec_f1[1], test_pre_rec_f1[2]))
 
     except KeyboardInterrupt:
         pass
@@ -344,38 +338,44 @@ def prepare_data(seqs, labels, vocabsize, maxlen=None):
 
 
 def eval(epoch):
+    if not os.path.exists("CONTENT_results") or len(os.listdir("CONTENT_results")) == 0:
+        raise Exception("Please Make Sure to Run Training and Testing Code First!!!")
+
+    epoch = 0 # We only run 1 epoch for test
     new_testlabels = np.load("CONTENT_results/testlabels_"+str(epoch)+"_3999.npy")
     pred_testlabels = np.load("CONTENT_results/predlabels_"+str(epoch)+"_3999.npy")
     test_auc = roc_auc_score(new_testlabels, pred_testlabels)
     test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
-    test_acc = accuracy_score(new_testlabels, pred_testlabels>0.5)
+    test_acc = accuracy_score(new_testlabels, pred_testlabels > FLAGS.threshold)
     print('AUC: %0.04f' % (test_auc))
     print('PRAUC: %0.04f' % (test_pr_auc))
     print('ACC: %0.04f' % (test_acc))
-    pre, rec, threshold = precision_recall_curve(new_testlabels, pred_testlabels)
-    test_pre_rec_f1 = precision_recall_fscore_support(new_testlabels, pred_testlabels > 0.5, average='binary')
+    pre, rec, _ = precision_recall_curve(new_testlabels, pred_testlabels)
+    test_pre_rec_f1 = precision_recall_fscore_support(new_testlabels, pred_testlabels > FLAGS.threshold, average='binary')
     print("  test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
                                                                                     test_pre_rec_f1[1],
                                                                                     test_pre_rec_f1[2]))
-    epoch = 6
+    epoch = num_epochs
     rnn_testlabels = np.load("rnn_results/testlabels_" + str(epoch) + ".npy")
     rnn_pred_testlabels = np.load("rnn_results/predlabels_" + str(epoch) + ".npy")
-    pre_rnn, rec_rnn, threshold_rnn = precision_recall_curve(rnn_testlabels, rnn_pred_testlabels)
-    test_pre_rec_f1 = precision_recall_fscore_support(rnn_testlabels, rnn_pred_testlabels > 0.5, average='binary')
+    pre_rnn, rec_rnn, _ = precision_recall_curve(rnn_testlabels, rnn_pred_testlabels)
+    test_pre_rec_f1 = precision_recall_fscore_support(rnn_testlabels, rnn_pred_testlabels > FLAGS.threshold, average='binary')
     test_auc = roc_auc_score(rnn_testlabels, rnn_pred_testlabels)
-    test_acc = accuracy_score(rnn_testlabels, rnn_pred_testlabels > 0.5)
+    test_acc = accuracy_score(rnn_testlabels, rnn_pred_testlabels > FLAGS.threshold)
     print('rnnAUC: %0.04f' % (test_auc))
     print('rnnACC: %0.04f' % (test_acc))
     print("  rnn test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
                                                                                     test_pre_rec_f1[1],
                                                                                     test_pre_rec_f1[2]))
-    epoch = 5
+    epoch = num_epochs - 1
+    if epoch <= 0:
+        epoch = num_epochs
     wv_testlabels = np.load("rnnwordvec_results/testlabels_" + str(epoch) + ".npy")
     wv_pred_testlabels = np.load("rnnwordvec_results/predlabels_" + str(epoch) + ".npy")
-    pre_wv, rec_wv, threshold_wv = precision_recall_curve(wv_testlabels, wv_pred_testlabels)
-    test_pre_rec_f1 = precision_recall_fscore_support(new_testlabels, wv_pred_testlabels > 0.5, average='binary')
+    pre_wv, rec_wv, _ = precision_recall_curve(wv_testlabels, wv_pred_testlabels)
+    test_pre_rec_f1 = precision_recall_fscore_support(new_testlabels, wv_pred_testlabels > FLAGS.threshold, average='binary')
     test_auc = roc_auc_score(wv_testlabels, wv_pred_testlabels)
-    test_acc = accuracy_score(wv_testlabels, wv_pred_testlabels > 0.5)
+    test_acc = accuracy_score(wv_testlabels, wv_pred_testlabels > FLAGS.threshold)
     print('wvAUC: %0.04f' % (test_auc))
     print('wvACC: %0.04f' % (test_acc))
     print("  wv test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
