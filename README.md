@@ -11,13 +11,14 @@ The code in this repository is either re-used or heavily based off the code from
    1. `pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip`
    2. `pip install --upgrade https://github.com/Theano/Theano/archive/master.zip`
 4. On the first setup, it is best to use `make new` which should provide a setup for the input dataset provided or download the data directly if no dataset at the path `data/S1_File.txt` exists.
-5. Then for a general run with training and testing you can simply use `make run` and the model should be trained and then tested on its classification based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file. For convenience, the data folder will be created with already pre-processed files but S1_File.txt will be repulled through the code if needed as it is quite large.
-6. If you wish to make any changes to how the model is trained you can edit the `Configuration.py` file and use `make new` again, the splits for the data can be adjusted at the top of `DataPrep.py` should you have new data with different split dimensions.
+5. Then for a general run with training and testing you can simply use `make train_continued` and the pre-trained model should be trained and then you can test on its classification using `make test`, these use data based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file, if you do this, makes sure to use `make new`. For convenience, the data folder will be created with already pre-processed files but S1_File.txt will be repulled through the code if needed as it is quite large.
+6. If you wish to make any changes to how the model is trained you can edit the `Configuration.py` file. The splits for the data can be adjusted at the top of `DataPrep.py` should you have new data with different split dimensions.
+7. To train an entirely new model just use `make train`.
 
-NOTE: If you are unable to use `make` then use `python3 Main.py new` for a new run or `python3 Main.py` instead of `make run`. There is also the fixed batch size version of the code which can be ran through `python3 Main.py new_fixed` or `python3 Main.py fixed` but this is still a work-in-progress so ignore this for now.
+NOTE: If you are unable to use `make` then use `python3 Main.py new` for a new run or `python3 Main.py train continued` instead of `make train_continued`. If you want to see what commands should replace the make commands look at the contents of the `Makefile` and look at what commands are run for each section.
 
 For more specific ways to train, test, and evaluate see the sections below. Make sure you use `make new` before using them!
-## How to Train
+## How to Train a New Model
 
 Make sure you have already run `make new`:
 
@@ -32,7 +33,25 @@ or if you don't have `make`, run the command:
 ```bash
 python3 main.py train
 ```
-This will train, run against validation data and save the model locally
+This will train a new model and run it against validation data, then save the model locally as `model.npz`
+
+## How to Train a Saved Model
+
+Make sure you have already run `make new`:
+
+In the Project Directory after all dependencies have been installed, run the command:
+
+```bash
+make train_continued
+```
+
+or if you don't have `make`, run the command:
+
+```bash
+python3 Main.py train continued
+```
+This will train a saved model under the name `model.npz` that exists in the current working directory, 
+run against validation data and then resave the model to the same file.
 ## How to Test
 
 Make sure you have already run `make new`:
@@ -46,10 +65,10 @@ make test
 or if you don't have `make`, run the command:
 
 ```bash
-python3 main.py test
+python3 Main.py test
 ```
 
-This will test the trained model (named `model.pckl`) in the project directory against the dataset loaded from `data/S1_File.txt`
+This will test the trained model (named `model.npz`) in the project directory against the dataset loaded from `data/S1_File.txt`
 Note: If the pretrained model isn't available you will have to train one first
 
 ## How to Evaluate
@@ -65,30 +84,31 @@ make eval
 or if you don't have `make`, run the command:
 
 ```bash
-python3 main.py eval
+python3 Main.py eval
 ```
 
 This will evaluate the model results as done in the original project through clustering that can be viewed in the folder titled `evaluation_results`
-This uses output from the training runs rather than the model itself, so note you will have to run training and testing for this to update
+This uses output from the training and testing runs rather than the model itself, so note you will have to run training and testing for this to update
 ## Code Flow
 
-1. Data Pre-Processing Code can be found in `DataPrep.py`
-2. Training, Testing and Evaluation Code are found in either `CONTENT.py` or `CONTENT_FixedBatch.py`
-3. The Pretrained model will be stored as `model.pckl` in this repository
+1. `Main.py` is the entry point that calls all other methods and sets up the project
+2. Data Pre-Processing Code can be found in `DataPrep.py` which pulls from and also fills-in the `data` folder.
+3. Training, Testing and Evaluation Code are found in either `CONTENT.py` and utilize `Configuration.py` and `PatientDataLoader.py`
+4. The Pretrained model from training will be stored as `model.npz` in this directory.
 
 ## Results Table
 
-Data for Run #1 Is Tentative as kinks are being worked out
+Data for 10 Experiment Runs:
 
 | Experiment Run      |  #1 (Tmp)  |     #2     |     #3     |     #4     |     #5     |     #6     |     #7     |     #8     |     #9     |     #10    |
 | ------------------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
-| ROC-AUC             | 0.7935     | 0.8006     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     |
-| Accuracy(%)         | 83.05%     | 83.61%     | 0.0000%    | 0.0000%    | 0.0000%    | 0.0000%    | 0.0000%    | 0.0000%    | 0.0000%    | 0.0000%    |
-| Precision           | 0.7074     | 0.7526     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     |
-| Recall              | 0.3901     | 0.3791     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     |
-| F1-Score            | 0.5029     | 0.5042     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     |
-| CPU/GPU Hours       | 1.30       | 1.46       | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     |
-| Memory Usage (GB)   | 521.56     | 526.03     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     | 0.0000     |
+| ROC-AUC             | 0.7935     | 0.8006     | 0.8009     | 0.7998     | 0.7995     | 0.7973     | 0.7931     | 0.0000     | 0.0000     | 0.0000     |
+| Accuracy(%)         | 83.05%     | 83.61%     | 83.82%     | 83.72%     | 84.08%     | 84.01%     | 83.81%     | 0.0000%    | 0.0000%    | 0.0000%    |
+| Precision           | 0.7074     | 0.7526     | 0.7572     | 0.6940     | 0.7251     | 0.7202     | 0.7092     | 0.0000     | 0.0000     | 0.0000     |
+| Recall              | 0.3901     | 0.3791     | 0.3882     | 0.4639     | 0.4444     | 0.4454     | 0.4464     | 0.0000     | 0.0000     | 0.0000     |
+| F1-Score            | 0.5029     | 0.5042     | 0.5133     | 0.5561     | 0.5511     | 0.5504     | 0.5479     | 0.0000     | 0.0000     | 0.0000     |
+| CPU/GPU Hours       | 1.30       | 1.46       | 1.24       | 1.26       | 1.25       | 1.33       | 1.29       | 0.0000     | 0.0000     | 0.0000     |
+| Memory Usage (GB)   | 521.56     | 526.03     | 407.78     | 408.86     | 411.11     | 410.58     | 414.10     | 0.0000     | 0.0000     | 0.0000     |
 
 - Average ROC-AUC Achieved: 0.0000 ± 0.0000
 - Average Accuracy Achieved: 0.0000% ± 0.0000%
@@ -97,6 +117,7 @@ Data for Run #1 Is Tentative as kinks are being worked out
 - Average F1-Score Achieved: 0.0000 ± 0.0000
 - Average CPU/GPU Hours: 0.0000 ± 0.0000 Hours
 - Average Memory Usage: 0.0000 ± 0.0000 GB
+
 ## Dependencies
 
 The dependencies required for this project can be found inside of the requirements.txt and can be downloaded via `pip install -r requirements.txt` or via the `conda` CLI tool as well, but here are the dependencies listed out for convenience:
