@@ -87,7 +87,7 @@ or if you don't have `make`, run the command:
 python3 Main.py eval
 ```
 
-This will evaluate the model results as done in the original project through clustering that can be viewed in the folder titled `evaluation_results`
+This will evaluate the model results as done in the original project and show a plot of precision vs recall for the test results.
 This uses output from the training and testing runs rather than the model itself, so note you will have to run training and testing for this to update
 ## Code Flow
 
