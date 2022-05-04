@@ -341,8 +341,8 @@ def eval(epoch):
         raise Exception("Please Make Sure to Run Training and Testing Code First!!!")
 
     epoch = 0 # We only run 1 epoch for test
-    new_testlabels = np.load("CONTENT_results/testlabels_"+str(epoch)+"_3999.npy")
-    pred_testlabels = np.load("CONTENT_results/predlabels_"+str(epoch)+"_3999.npy")
+    new_testlabels = np.load("CONTENT_results/testlabels_"+str(epoch)+".npy")
+    pred_testlabels = np.load("CONTENT_results/predlabels_"+str(epoch)+".npy")
     test_auc = roc_auc_score(new_testlabels, pred_testlabels)
     test_pr_auc = pr_auc(new_testlabels, pred_testlabels)
     test_acc = accuracy_score(new_testlabels, pred_testlabels > FLAGS.threshold)
@@ -354,42 +354,44 @@ def eval(epoch):
     print("  test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
                                                                                     test_pre_rec_f1[1],
                                                                                     test_pre_rec_f1[2]))
-    epoch = num_epochs
-    rnn_testlabels = np.load("rnn_results/testlabels_" + str(epoch) + ".npy")
-    rnn_pred_testlabels = np.load("rnn_results/predlabels_" + str(epoch) + ".npy")
-    pre_rnn, rec_rnn, _ = precision_recall_curve(rnn_testlabels, rnn_pred_testlabels)
-    test_pre_rec_f1 = precision_recall_fscore_support(rnn_testlabels, rnn_pred_testlabels > FLAGS.threshold, average='binary')
-    test_auc = roc_auc_score(rnn_testlabels, rnn_pred_testlabels)
-    test_acc = accuracy_score(rnn_testlabels, rnn_pred_testlabels > FLAGS.threshold)
-    print('rnnAUC: %0.04f' % (test_auc))
-    print('rnnACC: %0.04f' % (test_acc))
-    print("  rnn test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
-                                                                                    test_pre_rec_f1[1],
-                                                                                    test_pre_rec_f1[2]))
-    epoch = num_epochs - 1
-    if epoch <= 0:
-        epoch = num_epochs
-    wv_testlabels = np.load("rnnwordvec_results/testlabels_" + str(epoch) + ".npy")
-    wv_pred_testlabels = np.load("rnnwordvec_results/predlabels_" + str(epoch) + ".npy")
-    pre_wv, rec_wv, _ = precision_recall_curve(wv_testlabels, wv_pred_testlabels)
-    test_pre_rec_f1 = precision_recall_fscore_support(new_testlabels, wv_pred_testlabels > FLAGS.threshold, average='binary')
-    test_auc = roc_auc_score(wv_testlabels, wv_pred_testlabels)
-    test_acc = accuracy_score(wv_testlabels, wv_pred_testlabels > FLAGS.threshold)
-    print('wvAUC: %0.04f' % (test_auc))
-    print('wvACC: %0.04f' % (test_acc))
-    print("  wv test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
-                                                                                    test_pre_rec_f1[1],
-                                                                                    test_pre_rec_f1[2]))
+
+    # This file is never created anywhere?
+    # epoch = num_epochs
+    # rnn_testlabels = np.load("rnn_results/testlabels_" + str(epoch) + ".npy")
+    # rnn_pred_testlabels = np.load("rnn_results/predlabels_" + str(epoch) + ".npy")
+    # pre_rnn, rec_rnn, _ = precision_recall_curve(rnn_testlabels, rnn_pred_testlabels)
+    # test_pre_rec_f1 = precision_recall_fscore_support(rnn_testlabels, rnn_pred_testlabels > FLAGS.threshold, average='binary')
+    # test_auc = roc_auc_score(rnn_testlabels, rnn_pred_testlabels)
+    # test_acc = accuracy_score(rnn_testlabels, rnn_pred_testlabels > FLAGS.threshold)
+    # print('rnnAUC: %0.04f' % (test_auc))
+    # print('rnnACC: %0.04f' % (test_acc))
+    # print("  rnn test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
+    #                                                                                 test_pre_rec_f1[1],
+    #                                                                            test_pre_rec_f1[2]))
+    
+    # epoch = num_epochs - 1
+    # if epoch <= 0:
+    #     epoch = num_epochs
+    # wv_testlabels = np.load("rnnwordvec_results/testlabels_" + str(epoch) + ".npy")
+    # wv_pred_testlabels = np.load("rnnwordvec_results/predlabels_" + str(epoch) + ".npy")
+    # pre_wv, rec_wv, _ = precision_recall_curve(wv_testlabels, wv_pred_testlabels)
+    # test_pre_rec_f1 = precision_recall_fscore_support(new_testlabels, wv_pred_testlabels > FLAGS.threshold, average='binary')
+    # test_auc = roc_auc_score(wv_testlabels, wv_pred_testlabels)
+    # test_acc = accuracy_score(wv_testlabels, wv_pred_testlabels > FLAGS.threshold)
+    # print('wvAUC: %0.04f' % (test_auc))
+    # print('wvACC: %0.04f' % (test_acc))
+    # print("  wv test Precision, Recall and F1:\t\t{:.4f} %\t\t{:.4f}\t\t{:.4f}".format(test_pre_rec_f1[0],
+    #                                                                                 test_pre_rec_f1[1],
+    #                                                                                 test_pre_rec_f1[2]))
 
 
     import matplotlib.pyplot as plt
     plt.plot(rec, pre, label='CONTENT')
-    plt.plot(rec_rnn, pre_rnn, label='RNN')
-    plt.plot(rec_wv, pre_wv, label='RNN+word2vec')
+    # plt.plot(rec_rnn, pre_rnn, label='RNN')
+    # plt.plot(rec_wv, pre_wv, label='RNN+word2vec')
     plt.legend()
 
     plt.title("Precision-Recall Curves")
-
 
     plt.show()
 
