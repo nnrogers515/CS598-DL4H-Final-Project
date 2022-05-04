@@ -7,13 +7,14 @@ The code in this repository is either re-used or heavily based off the code from
 
 1. Clone this repository locally using the method of your choice. For the simplest to setup, cloning over http with standard github credentials would be best. The command for this you would type into your terminal that has access to the `git` CLI tool: `git clone https://github.com/nnrogers515/CS598-DL4H-Final-Project.git`
 2. Before running any code you will need to use `cd CS598-DL4H-Final-Project` to enter the project directory then install the necessary imports via `pip install -r requirements.txt`
+   1. See Dependencies Section of this README.md if you are having more trouble!
 3. Due to additional import complications, you will also need to manually upgrade versions for Lasagne using the follow commands (Don't worry if it says it failed to install the wheel, as long as it says `Successfully installed Lasagne-0.2.dev1` and `Successfully installed Theano-1.0.5+unknown` you should be fine):
    1. `pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip`
    2. `pip install --upgrade https://github.com/Theano/Theano/archive/master.zip`
 4. On the first setup, it is best to use `make new` which should provide a setup for the input dataset provided or download the data directly if no dataset at the path `data/S1_File.txt` exists.
-5. Then for a general run with training and testing you can simply use `make train_continued` and the pre-trained model should be trained and then you can test on its classification using `make test`, these use data based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file, if you do this, makes sure to use `make new`. For convenience, the data folder will be created with already pre-processed files but S1_File.txt will be repulled through the code if needed as it is quite large.
-6. If you wish to make any changes to how the model is trained you can edit the `Configuration.py` file. The splits for the data can be adjusted at the top of `DataPrep.py` should you have new data with different split dimensions.
-7. To train an entirely new model just use `make train`.
+5. Then for a general run with training and testing you can simply use `make train_continued` and the pre-trained model should be trained and then you can test on its classification using `make test` (you can run `make test` right away if you don't want to wait til training finishes), these use data based off of the data sample provided in `data/S1_File.txt` you can replace this file with your own file given it matches the same csv formatting as this file, if you do this, makes sure to use `make new`. For convenience, the data folder will be created with already pre-processed files but `S1_File.txt` will be re-pulled through the code if needed as it is quite large.
+6. If you wish to make any changes to how the model is trained you can edit the `Configuration.py` file. The splits for the data can be adjusted at the top of `DataPrep.py` should you have new data that you want to split a certain way.
+7. To train an entirely new model just use `make train` and the pre-trained model will be overwritten.
 
 NOTE: If you are unable to use `make` then use `python3 Main.py new` for a new run or `python3 Main.py train continued` instead of `make train_continued`. If you want to see what commands should replace the make commands look at the contents of the `Makefile` and look at what commands are run for each section.
 
