@@ -148,7 +148,7 @@ The dataset for this should be downloaded through the code pipeline, but in the 
 
 ## Additional Info
 
-Communication with the Author of the Paper Has Been Added in author_communication.png if needed.
+Communication with the Author of the Paper Has Been Added as [author_communication.PNG](https://github.com/nnrogers515/CS598-DL4H-Final-Project/blob/main/author_communication.PNG) if needed.
 
 # Sources
 
