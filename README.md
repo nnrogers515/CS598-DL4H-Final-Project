@@ -146,6 +146,10 @@ If you are still having issues running the app, create a virtual python environm
 
 The dataset for this should be downloaded through the code pipeline, but in the case of there being any issues, you can use the `txtData.zip` file in this repository and extract this into a `data/` folder. This zip file can be downloaded directly from the paper at https://doi.org/10.1371/journal.pone.0195024 via this link https://journals.plos.org/plosone/article/file?type=supplementary&id=10.1371/journal.pone.0195024.s001
 
+## Additional Info
+
+Communication with the Author of the Paper Has Been Added in author_communication.png if needed.
+
 # Sources
 
 ## Paper Citation
